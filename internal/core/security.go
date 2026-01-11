@@ -6,10 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// -----------------------------------------------------------
 // SecureHeaders — middleware: CSP с nonce + безопасные заголовки
-// -----------------------------------------------------------
-
 func SecureHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("X-Content-Type-Options", "nosniff")
@@ -46,8 +43,8 @@ func SecureHeaders() gin.HandlerFunc {
 //   'nonce-ABC123'   — только с этим nonce
 //   data:            — data-uri (например, base64-картинки)
 //
-// --- ВАРИАНТ 1: БАЗОВЫЙ (БЕЗОПАСНЫЙ, КАК СЕЙЧАС) ---
 
+// CSPBasic --- ВАРИАНТ 1: БАЗОВЫЙ (БЕЗОПАСНЫЙ, КАК СЕЙЧАС) ---
 func CSPBasic() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		nonce, _ := c.Request.Context().Value(CtxNonce).(string)
@@ -67,10 +64,9 @@ func CSPBasic() gin.HandlerFunc {
 	}
 }
 
-// --- ВАРИАНТ 2: РАЗРЕШИТЬ ВСЕ ИНЛАЙН СТИЛИ (НЕБЕЗОПАСНО!) ---
+// CSPAllowInlineStyles --- ВАРИАНТ 2: РАЗРЕШИТЬ ВСЕ ИНЛАЙН СТИЛИ (НЕБЕЗОПАСНО!) ---
 // Добавляем 'unsafe-inline' — браузер разрешит style="..."
 // НО: это ослабляет защиту! Используй только для тестов.
-
 func CSPAllowInlineStyles() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		nonce, _ := c.Request.Context().Value(CtxNonce).(string)
@@ -84,9 +80,8 @@ func CSPAllowInlineStyles() gin.HandlerFunc {
 	}
 }
 
-// --- ВАРИАНТ 3: СТРОГИЙ — ТОЛЬКО СВОИ РЕСУРСЫ, БЕЗ CDN ---
+// CSPStrictLocalOnly --- ВАРИАНТ 3: СТРОГИЙ — ТОЛЬКО СВОИ РЕСУРСЫ, БЕЗ CDN ---
 // Никаких внешних библиотек. Только локальные файлы и nonce.
-
 func CSPStrictLocalOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		nonce, _ := c.Request.Context().Value(CtxNonce).(string)
@@ -103,12 +98,33 @@ func CSPStrictLocalOnly() gin.HandlerFunc {
 	}
 }
 
-// --- ВАРИАНТ 4: ДЛЯ РАЗРАБОТКИ — ОТКЛЮЧИТЬ CSP СОВСЕМ ---
+// CSPDisabled --- ВАРИАНТ 4: ДЛЯ РАЗРАБОТКИ — ОТКЛЮЧИТЬ CSP СОВСЕМ ---
 // Внимание: НЕ ИСПОЛЬЗУЙ В ПРОДАКШЕНЕ!
-
 func CSPDisabled() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Ничего не ставим — CSP не будет
+		c.Next()
+	}
+}
+
+// SecurityHeaders --- ВАРИАНТ 5: ДЛЯ REST API JSON  ---
+func SecurityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 1. Тот самый минимальный CSP
+		c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none';")
+
+		// 2. Защита от подмены типа контента (ОЧЕНЬ важно для API)
+		c.Header("X-Content-Type-Options", "nosniff")
+
+		// 3. Защита от Clickjacking (для старых браузеров)
+		c.Header("X-Frame-Options", "DENY")
+
+		// 4. Защита от XSS в старых браузерах
+		c.Header("X-XSS-Protection", "1; mode=block")
+
+		// 5. Ограничение передачи Referer
+		c.Header("Referrer-Policy", "no-referrer")
+
 		c.Next()
 	}
 }

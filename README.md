@@ -43,7 +43,7 @@ myApp/
 │  │     ├─ about.go          # /about
 │  │     ├─ form.go           # /form GET / POST
 │  │     ├─ catalog.go        # /catalog
-│  │     ├─ show_product.go        # /product/:id
+│  │     ├─ show_product.go   # /product/:id
 │  │     ├─ notfound.go       # 404
 │  │     └─ debug.go          # /debug (JSON)
 │  │
